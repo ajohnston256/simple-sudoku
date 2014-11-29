@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.2/angular.min.js"></script>
+<script src="sudoku.js"></script>
+<link rel="stylesheet" type="text/css" href="sudoku.css">
+  <meta charset="utf-8">
+  <title>Sudoku</title>
+</head>
+<body ng-app="sudokuApp">
+  <div ng-controller="SudokuController">
+    <table style="width:300px">
+      <tr ng-repeat="row in sudoku">
+        <td ng-repeat="cell in row"> 
+          {{cell.value}}
+        <td>
+      </tr>
+
+</table>
+     
+  </div>
+</body>
+</html>
