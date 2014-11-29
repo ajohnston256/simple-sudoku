@@ -105,7 +105,7 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
     this.solved = false;
     this.failed = false;
     this.numIterations = 0;
-    this.guessIndex = 0;
+    this.ucIndex = 0;
     
     this.getUnknownCells();
     this.initOptions();
@@ -113,6 +113,8 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
     while (this.solved === false && this.failed === false && this.numIterations < 1000) {
       
       this.makeGuess();
+      this.solved = this.isSolved();
+      
       this.updateOptions();
       this.checkResult();
       
@@ -145,7 +147,10 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
   }
   
   Grid.prototype.updateOptions = function() {
-    for (var i = this.guessIndex + 1; i < this.unknownCells.length; i++) {
+    if(this.solved)
+      return;
+  
+    for (var i = this.ucIndex + 1; i < this.unknownCells.length; i++) {
       this.updateCellOptions(this.unknownCells[i]);
     }
   }
@@ -176,11 +181,19 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
      for(var i = 0; i < collection.length; i++) {
        var cell = collection[i],
          value = cell.value;
+         
+       var indexOfOption = this.illegalOptions.indexOf(value);
 
-       if (value !== 0){
+       if (value !== 0 && indexOfOption === -1){
          this.illegalOptions.push(value);
        }
      }
+  }
+  
+  Grid.prototype.getInitOptions = function() {
+    return [1, 2, 3,
+            4, 5, 6,
+            7, 8, 9];
   }
   
   Grid.prototype.isLegalOption = function(element) {
@@ -188,12 +201,6 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
       passed = (foundIllegal === -1);
 
     return passed;
-  }
-  
-  Grid.prototype.getInitOptions = function() {
-    return [1, 2, 3,
-            4, 5, 6,
-            7, 8, 9];
   }
   
   Grid.prototype.sortUnknownCells = function() {
@@ -207,81 +214,70 @@ myApp.controller('SudokuController', ['$scope', '$log', function($scope, $log) {
     if (cellA.options.length > cellB.options.length) {
       return 1;
     }
-    // a must be equal to b
+    // cellA must have the same number of options as cellB
     return 0;
   }
   
   Grid.prototype.makeGuess = function() {
-    var cell = this.unknownCells[this.guessIndex],
+    var cell = this.unknownCells[this.ucIndex],
       options,
       nextGuess;
-    
-    if(!cell) {
-      $log.error('could not find cell at guessIndex ', this.guessIndex);
-    }
     
     options = cell.options;
     nextGuess = options.shift();
     
-    if (!nextGuess)
-      $log.error('nextGuess is not valid for cell', cell);
-      
     cell.value = nextGuess;
   }
   
-  Grid.prototype.checkResult = function() {
-    var isSolved = this.checkIfSolved();
-    
-    if (isSolved) {
-      this.solved = true;
-      return;
+  Grid.prototype.isSolved = function() {
+    if (!this.lastUnknownCell){
+      var len = this.unknownCells.length;
+      
+      this.lastUnknownCell = this.unknownCells[len-1];
     }
+    
+    return (this.lastUnknownCell.value !== 0);
+  }
+
+  Grid.prototype.checkResult = function() {
+    if(this.solved)
+      return;
 
     var isPossible = this.checkIfPossible();
     
-    var currentCell = this.unknownCells[this.guessIndex];
+    var currentCell = this.unknownCells[this.ucIndex];
     
-    if (!isPossible && this.guessIndex === 0) {
+    if (!isPossible && this.ucIndex === 0) {
       this.failed = true;
       $log.error('failed to solve the sudoku');
     } else if (!isPossible && currentCell.options.length === 0) {
       currentCell.value = 0;
       
       // backtrack until we hit a cell that has options
-      while(currentCell.options.length === 0 && this.guessIndex > 0) {
-        this.guessIndex--;
-        currentCell = this.unknownCells[this.guessIndex];
+      while(currentCell.options.length === 0 && this.ucIndex > 0) {
+        this.ucIndex--;
+        currentCell = this.unknownCells[this.ucIndex];
         currentCell.value = 0;
+        console.log('backtracking ...')
       }
 
       this.updateOptions;
     } else {
-      this.guessIndex++;
-      if (this.guessIndex >= this.unknownCells.length){
+      this.ucIndex++;
+      if (this.ucIndex >= this.unknownCells.length){
         this.failed = true;
-        $log.error('guessIndex exceeded number of unknown cells');
+        $log.error('ucIndex exceeded number of unknown cells');
         return;
       }
     }
   }
-  
-  Grid.prototype.checkIfSolved = function() {
-  
-    for (var i = 0; i < this.unknownCells.length; i++) {
-      var value = this.unknownCells[i].value;
-      
-      if (!value || value === 0)
-        return false;
-    }
-  
-    return true;
-  }
+
   
   Grid.prototype.checkIfPossible = function() {
-    if (this.guessIndex === 5)
+    if (this.ucIndex === 5)
       var x = 1;
     
-    for (var i = this.guessIndex + 1; i < this.unknownCells.length; i++) {
+    for (var i = this.ucIndex + 1; i < this.unknownCells.length; i++) {
       var currentCell = this.unknownCells[i];
       if (currentCell.value === 0 && currentCell.options.length === 0)
         return false;
